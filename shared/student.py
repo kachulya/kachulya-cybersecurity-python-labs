@@ -1,0 +1,3 @@
+STUDENT_NAME = "Назар Качмар"
+GROUP_NAME = "КБ-201"
+VARIANT_NUMBER = 9
