@@ -1,19 +1,21 @@
-import hashlib
 import csv
+import hashlib
 import json
 import os
 import sys
 from datetime import datetime
+from functools import wraps
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
-from shared.student import VARIANT_NUMBER
+# Додаємо шлях для імпорту спільного модуля
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
+from shared.student import VARIANT_NUMBER  # noqa: E402
 
 # Налаштування Варіанту 9
 MIN_PASSWORD_LENGTH = 13
 PERSONAL_SALT = str(VARIANT_NUMBER).zfill(5)
-DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
-USERS_CSV = os.path.join(DATA_DIR, 'users.csv')
-LOG_JSON = os.path.join(DATA_DIR, 'log.json')
+DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
+USERS_CSV = os.path.join(DATA_DIR, "users.csv")
+LOG_JSON = os.path.join(DATA_DIR, "log.json")
 
 
 class ValidationError(Exception):
@@ -21,7 +23,7 @@ class ValidationError(Exception):
     pass
 
 
-def ensure_data_dir():
+def ensure_data_dir() -> None:
     """Створює директорію data, якщо вона не існує."""
     if not os.path.exists(DATA_DIR):
         os.makedirs(DATA_DIR)
@@ -35,21 +37,21 @@ def generate_hash(password: str, salt: str = "00000") -> str:
         raise ValidationError(f"Пароль надто короткий (мінімум {MIN_PASSWORD_LENGTH} символів).")
 
     combined = password + salt
-    # Використовуємо sha224 для Варіанту 9
-    return hashlib.sha224(combined.encode('utf-8')).hexdigest()
+    # sha224 для Варіанту 9
+    return hashlib.sha224(combined.encode("utf-8")).hexdigest()
 
 
-def create_user(username: str, password: str) -> tuple:
+def create_user(username: str, password: str) -> tuple[str, str]:
     """Створює кортеж користувача з хешованим паролем."""
     hash_value = generate_hash(password, PERSONAL_SALT)
     return (username, hash_value)
 
 
-def create_users(users_list: tuple):
+def create_users(users_list: tuple) -> None:
     """Записує список користувачів у CSV файл."""
     ensure_data_dir()
     try:
-        with open(USERS_CSV, mode='w', newline='', encoding='utf-8') as file:
+        with open(USERS_CSV, mode="w", newline="", encoding="utf-8") as file:
             writer = csv.writer(file)
             writer.writerow(["username", "password_hash"])
             for user in users_list:
@@ -58,15 +60,15 @@ def create_users(users_list: tuple):
                     writer.writerow(user_record)
                 except ValidationError as e:
                     print(f"Помилка створення {user[0]}: {e}")
-    except (IOError, PermissionError) as e:
+    except OSError as e:
         print(f"Помилка роботи з файлом {USERS_CSV}: {e}")
 
 
-def read_users_db() -> list:
+def read_users_db() -> list[dict]:
     """Зчитує базу користувачів з CSV."""
     db = []
     try:
-        with open(USERS_CSV, mode='r', encoding='utf-8') as file:
+        with open(USERS_CSV, mode="r", encoding="utf-8") as file:
             reader = csv.DictReader(file)
             for row in reader:
                 db.append(row)
@@ -78,6 +80,7 @@ def read_users_db() -> list:
 def log_event(func):
     """Декоратор для логування спроб авторизації в JSON."""
 
+    @wraps(func)
     def wrapper(username: str, password: str, *args, **kwargs):
         ensure_data_dir()
         result = "failure"
@@ -93,13 +96,13 @@ def log_event(func):
                 "result": result,
                 "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                 "args": args,
-                "kwargs": kwargs
+                "kwargs": kwargs,
             }
             try:
                 # Читаємо існуючі логи або створюємо новий список
                 logs = []
                 if os.path.exists(LOG_JSON):
-                    with open(LOG_JSON, 'r', encoding='utf-8') as f:
+                    with open(LOG_JSON, "r", encoding="utf-8") as f:
                         try:
                             logs = json.load(f)
                         except json.JSONDecodeError:
@@ -107,9 +110,9 @@ def log_event(func):
 
                 logs.append(log_entry)
 
-                with open(LOG_JSON, 'w', encoding='utf-8') as f:
+                with open(LOG_JSON, "w", encoding="utf-8") as f:
                     json.dump(logs, f, indent=4)
-            except IOError as e:
+            except OSError as e:
                 print(f"Помилка запису логів: {e}")
 
     return wrapper
@@ -129,17 +132,18 @@ def login(username: str, password: str) -> bool:
         return False  # Пароль не проходить базову валідацію, тому авторизація неможлива
 
     for user_record in db:
-        if user_record['username'] == username and user_record['password_hash'] == input_hash:
+        if user_record["username"] == username and user_record["password_hash"] == input_hash:
             return True
     return False
 
 
-def main():
+def main() -> None:
     users_to_register = (
         ("admin", "SuperSecurePass123"),
         ("user1", "ValidPassForVar9"),
         ("guest", "Short123"),  # Викличе ValidationError (менше 13 символів)
-        ("developer", "AnotherLongPassword")
+        ("developer", "AnotherLongPassword"),
+        ("", "ffff")
     )
 
     print("--- Реєстрація користувачів ---")

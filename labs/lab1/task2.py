@@ -39,7 +39,7 @@ def evaluate_access(username: str, resource_level: int) -> str:
         return "DENY (User not found)"
 
     if username in blocked_users:
-        return "DENY (User is blocked)"
+        return "DENY (User is blocked )"
 
     user_data = users[username]
 

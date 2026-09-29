@@ -1,0 +1,6 @@
+Target Resource,Security Score,Status,Missing Security Headers
+https://secure.example.invalid/,100/100,PASS,None
+https://legacy.example.invalid/,5/100,FAIL,"Strict-Transport-Security, X-Content-Type-Options, Content-Security-Policy"
+https://api.example.invalid/,65/100,WARN,X-Frame-Options
+https://portal.example.invalid/,100/100,PASS,None
+https://minimal.example.invalid/,0/100,FAIL,"Strict-Transport-Security, X-Content-Type-Options, X-Frame-Options, Content-Security-Policy"
