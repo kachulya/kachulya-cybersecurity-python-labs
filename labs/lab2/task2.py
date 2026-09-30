@@ -1,9 +1,11 @@
 import argparse
-import logging
-import json
 import csv
+import json
+import logging
 import re
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 # Необхідні заголовки безпеки
 REQUIRED_HEADERS = {
@@ -17,7 +19,7 @@ REQUIRED_HEADERS = {
 def setup_logging(log_level: str):
     numeric_level = getattr(logging, log_level.upper(), logging.INFO)
     if not isinstance(numeric_level, int):
-        raise ValueError(f"Invalid log level: {log_level}")
+        raise TypeError(f"Invalid log level: {log_level}")
     logging.basicConfig(
         level=numeric_level,
         format='[%(levelname)s] %(message)s'
@@ -30,25 +32,24 @@ def check_software_leaks(headers: dict, url: str):
     leaks = []
 
     for target_header in ["Server", "X-Powered-By"]:
-        if target_header in headers:
-            if version_pattern.search(headers[target_header]):
-                leaks.append(target_header)
-                logging.warning(f"[LEAK] {url} leaks info in '{target_header}': {headers[target_header]}")
+        if target_header in headers and version_pattern.search(headers[target_header]):
+            leaks.append(target_header)
+            logger.warning(f"[LEAK] {url} leaks info in '{target_header}': {headers[target_header]}")
     return leaks
 
 
 def audit_headers(input_file: Path, output_file: Path, strict: bool):
-    logging.info(f"Auditing HTTP response headers from {input_file}...")
+    logger.info(f"Auditing HTTP response headers from {input_file}...")
 
     if not input_file.exists():
-        logging.error(f"File not found: {input_file}")
+        logger.error(f"File not found: {input_file}")
         return
 
     try:
         with open(input_file, "r", encoding="utf-8") as f:
             data = json.load(f)
-    except Exception as e:
-        logging.error(f"Failed to read JSON file: {e}")
+    except (OSError, json.JSONDecodeError) as e:
+        logger.error(f"Failed to read JSON file: {e}")
         return
 
     results = []
@@ -95,7 +96,7 @@ def audit_headers(input_file: Path, output_file: Path, strict: bool):
 
         # Згідно з вимогами, завжди логуємо відсутні заголовки
         if missing_headers:
-            logging.warning(f"Resource {url} is missing headers: {missing_str}")
+            logger.warning(f"Resource {url} is missing headers: {missing_str}")
 
     # Створюємо директорію для вихідного файлу, якщо її немає
     output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -107,9 +108,9 @@ def audit_headers(input_file: Path, output_file: Path, strict: bool):
                                                    "Missing Security Headers"])
             writer.writeheader()
             writer.writerows(results)
-        logging.info(f"Header audit report generated at {output_file}")
-    except Exception as e:
-        logging.error(f"Failed to write output CSV: {e}")
+        logger.info(f"Header audit report generated at {output_file}")
+    except OSError as e:
+        logger.error(f"Failed to write output CSV: {e}")
 
 
 def main():

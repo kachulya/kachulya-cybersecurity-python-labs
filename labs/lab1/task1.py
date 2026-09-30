@@ -4,7 +4,7 @@ import sys
 
 # Додаємо шлях для імпорту спільного модуля
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
-from shared.student import GROUP_NAME, STUDENT_NAME, VARIANT_NUMBER  # noqa: E402
+from shared.student import GROUP_NAME, STUDENT_NAME, VARIANT_NUMBER
 
 # Вхідні дані Варіанту 9 (константи пишемо великими літерами)
 PASSWORDS = [

@@ -1,12 +1,12 @@
-import os
-import re
 import hashlib
 import hmac
-from datetime import datetime, timezone, timedelta
+import os
+import re
 from dataclasses import dataclass
-from typing import List, Set, Optional, Any
+from datetime import datetime, timedelta, timezone
+from typing import Any
 
-# Іменована константа для кількості ітерацій хешування[cite: 1]
+# Іменована константа для кількості ітерацій хешування
 HASH_ITERATIONS = 100000
 
 class User:
@@ -16,8 +16,8 @@ class User:
         self.email = email
         self.role = role
         self.active = True
-        self.__password_hash: Optional[bytes] = None
-        self.__password_salt: Optional[bytes] = None
+        self.__password_hash: bytes | None = None
+        self.__password_salt: bytes | None = None
 
     @property
     def email(self) -> str:
@@ -25,7 +25,7 @@ class User:
 
     @email.setter
     def email(self, value: str):
-        # Локальна частина: латинська літера, 3-64 символи (літери, цифри, . _ -), @, домен з крапкою[cite: 1]
+        # Локальна частина: латинська літера, 3-64 символи (літери, цифри, . _ -), @, домен з крапкою
         pattern = r"^[a-zA-Z][a-zA-Z0-9._-]{2,63}@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
         if not re.match(pattern, value):
             raise ValueError(f"Недійсний формат email: {value}")
@@ -33,7 +33,7 @@ class User:
 
     def set_password(self, password: str):
         self.__password_salt = os.urandom(16)
-        # Використання константи для ітерацій[cite: 1]
+        # Використання константи для ітерацій
         self.__password_hash = hashlib.pbkdf2_hmac(
             "sha256", password.encode(), self.__password_salt, HASH_ITERATIONS
         )
@@ -41,7 +41,7 @@ class User:
     def check_password(self, password: str) -> bool:
         if not self.__password_hash or not self.__password_salt:
             return False
-        # Використання константи для ітерацій[cite: 1]
+        # Використання константи для ітерацій
         test_hash = hashlib.pbkdf2_hmac(
             "sha256", password.encode(), self.__password_salt, HASH_ITERATIONS
         )
@@ -55,7 +55,7 @@ class User:
 
 
 class Admin(User):
-    def __init__(self, username: str, email: str, permissions: Optional[Set[str]] = None):
+    def __init__(self, username: str, email: str, permissions: set[str] | None = None):
         super().__init__(username, email, role="admin")
         self.permissions = permissions if permissions is not None else set()
 
@@ -96,7 +96,7 @@ class LogEntry:
 
 class AuditLog:
     def __init__(self):
-        self.logs: List[LogEntry] = []
+        self.logs: list[LogEntry] = []
 
     def add_log(self, username: str, action: str):
         self.logs.append(LogEntry(datetime.now(timezone.utc), username, action))
@@ -111,12 +111,12 @@ class AuditLog:
 class UserAccount:
     SESSION_TIMEOUT_SEC = 900
 
-    def __init__(self, user: User, audit_log: Optional[AuditLog] = None):
+    def __init__(self, user: User, audit_log: AuditLog | None = None):
         self.user = user
-        self.session: Optional[Session] = None
+        self.session: Session | None = None
         self.audit_log = audit_log if audit_log else AuditLog()
 
-    # Сигнатура методу приймає username, password, ip[cite: 1]
+    # Сигнатура методу приймає username, password, ip
     def login(self, username: str, password: str, ip: str) -> bool:
         if self.user.username != username:
             self.audit_log.add_log(username, "login_failure (wrong user)")
@@ -126,7 +126,7 @@ class UserAccount:
             return False
         if self.user.check_password(password):
             self.session = Session(ip)
-            # Явний виклик touch() після успіху[cite: 1]
+            # Явний виклик touch() після успіху
             self.session.touch()
             self.audit_log.add_log(self.user.username, "login_success")
             return True

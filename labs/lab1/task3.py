@@ -3,12 +3,12 @@ import hashlib
 import json
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from functools import wraps
 
 # Додаємо шлях для імпорту спільного модуля
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
-from shared.student import VARIANT_NUMBER  # noqa: E402
+from shared.student import VARIANT_NUMBER
 
 # Налаштування Варіанту 9
 MIN_PASSWORD_LENGTH = 13
@@ -20,7 +20,6 @@ LOG_JSON = os.path.join(DATA_DIR, "log.json")
 
 class ValidationError(Exception):
     """Власний клас винятку для помилок валідації пароля."""
-    pass
 
 
 def ensure_data_dir() -> None:
@@ -66,15 +65,13 @@ def create_users(users_list: tuple) -> None:
 
 def read_users_db() -> list[dict]:
     """Зчитує базу користувачів з CSV."""
-    db = []
     try:
         with open(USERS_CSV, mode="r", encoding="utf-8") as file:
             reader = csv.DictReader(file)
-            for row in reader:
-                db.append(row)
+            return list(reader)
     except FileNotFoundError:
         print("База даних користувачів не знайдена.")
-    return db
+        return []
 
 
 def log_event(func):
@@ -94,7 +91,7 @@ def log_event(func):
                 "event": "login",
                 "user": username,
                 "result": result,
-                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
                 "args": args,
                 "kwargs": kwargs,
             }
