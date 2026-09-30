@@ -6,6 +6,9 @@ from datetime import datetime, timezone, timedelta
 from dataclasses import dataclass
 from typing import List, Set, Optional, Any
 
+# Іменована константа для кількості ітерацій хешування[cite: 1]
+HASH_ITERATIONS = 100000
+
 class User:
     def __init__(self, username: str, email: str, role: str = "user"):
         self.username = username
@@ -22,7 +25,7 @@ class User:
 
     @email.setter
     def email(self, value: str):
-        # Локальна частина: латинська літера, 3-64 символи (літери, цифри, . _ -), @, домен з крапкою
+        # Локальна частина: латинська літера, 3-64 символи (літери, цифри, . _ -), @, домен з крапкою[cite: 1]
         pattern = r"^[a-zA-Z][a-zA-Z0-9._-]{2,63}@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
         if not re.match(pattern, value):
             raise ValueError(f"Недійсний формат email: {value}")
@@ -30,15 +33,17 @@ class User:
 
     def set_password(self, password: str):
         self.__password_salt = os.urandom(16)
+        # Використання константи для ітерацій[cite: 1]
         self.__password_hash = hashlib.pbkdf2_hmac(
-            "sha256", password.encode(), self.__password_salt, 100000
+            "sha256", password.encode(), self.__password_salt, HASH_ITERATIONS
         )
 
     def check_password(self, password: str) -> bool:
         if not self.__password_hash or not self.__password_salt:
             return False
+        # Використання константи для ітерацій[cite: 1]
         test_hash = hashlib.pbkdf2_hmac(
-            "sha256", password.encode(), self.__password_salt, 100000
+            "sha256", password.encode(), self.__password_salt, HASH_ITERATIONS
         )
         return hmac.compare_digest(self.__password_hash, test_hash)
 
@@ -47,6 +52,7 @@ class User:
 
     def __str__(self):
         return f"User({self.username}, {self.email}, Role: {self.role}, Active: {self.active})"
+
 
 class Admin(User):
     def __init__(self, username: str, email: str, permissions: Optional[Set[str]] = None):
@@ -65,6 +71,7 @@ class Admin(User):
     def __str__(self):
         return super().__str__() + f" Permissions: {list(self.permissions)}"
 
+
 class Session:
     def __init__(self, ip: str):
         self.ip = ip
@@ -79,11 +86,13 @@ class Session:
             return False
         return (datetime.now(timezone.utc) - self.last_activity) <= timedelta(seconds=timeout_sec)
 
+
 @dataclass
 class LogEntry:
     timestamp: datetime
     username: str
     action: str
+
 
 class AuditLog:
     def __init__(self):
@@ -93,8 +102,11 @@ class AuditLog:
         self.logs.append(LogEntry(datetime.now(timezone.utc), username, action))
 
     def show_all(self):
+        tz_utc_3 = timezone(timedelta(hours=3))
         for log in self.logs:
-            print(f"[{log.timestamp.strftime('%Y-%m-%d %H:%M:%S UTC')}] {log.username}: {log.action}")
+            local_time = log.timestamp.astimezone(tz_utc_3)
+            print(f"[{local_time.strftime('%Y-%m-%d %H:%M:%S UTC')}] {log.username}: {log.action}")
+
 
 class UserAccount:
     SESSION_TIMEOUT_SEC = 900
@@ -104,12 +116,18 @@ class UserAccount:
         self.session: Optional[Session] = None
         self.audit_log = audit_log if audit_log else AuditLog()
 
-    def login(self, password: str, ip: str) -> bool:
+    # Сигнатура методу приймає username, password, ip[cite: 1]
+    def login(self, username: str, password: str, ip: str) -> bool:
+        if self.user.username != username:
+            self.audit_log.add_log(username, "login_failure (wrong user)")
+            return False
         if not self.user.active:
-            self.audit_log.add_log(self.user.username, "login_failure (inactive)")
+            self.audit_log.add_log(self.user.username, "login_failure")
             return False
         if self.user.check_password(password):
             self.session = Session(ip)
+            # Явний виклик touch() після успіху[cite: 1]
+            self.session.touch()
             self.audit_log.add_log(self.user.username, "login_success")
             return True
         self.audit_log.add_log(self.user.username, "login_failure")
