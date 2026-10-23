@@ -1,5 +1,8 @@
 import sys
-from labs.lab2.task1 import User, Admin, UserAccount
+from datetime import timedelta
+
+# Змінено шлях імпорту на lab02
+from labs.lab2.task1 import Admin, User, UserAccount
 
 
 def run_demo():
@@ -21,16 +24,36 @@ def run_demo():
     admin.grant_permission("FULL_ACCESS")
     print(f"Створено адміністратора: {admin}")
 
+    admin1 = Admin("sysadminnn", "adminn@domain.com")
+    admin1.grant_permission("NO_ACCESS")
+    print(f"Створено адміністратора: {admin1}")
+    print()
+
     # 3. Використання UserAccount (композиція)
     account = UserAccount(user)
 
     print("\n--- Спроби входу ---")
-    account.login("WrongPass", "192.168.1.50")
-    account.login("SecurePass123", "192.168.1.50")
-    print(f"Автентифіковано: {account.is_authenticated()}")
+    # Передача username в метод login
+    account.login("developer1", "WrongPass", "192.168.1.50")
+    account.login("developer1", "SecurePass123", "192.168.1.50")
+    print(f"Автентифіковано після правильного пароля: {account.is_authenticated()}")
 
-    # 4. Завершення сеансу
+    # Демонстрація завершення сеансу за таймаутом
+    print("\n--- Демонстрація таймауту сеансу ---")
+    if account["session"]:
+        # Віднімаємо час, що перевищує SESSION_TIMEOUT_SEC (900)
+        account["session"].last_activity -= timedelta(seconds=1000)
+        print(
+            f"Автентифіковано після 1000 секунд простою: {account.is_authenticated()}"
+        )
+
+    # 4. Завершення сеансу (logout)
+    print("\n--- Вихід із системи ---")
+    account.login(
+        "developer1", "SecurePass123", "192.168.1.50"
+    )  # Вхід для демонстрації виходу
     account.logout()
+    print(f"Автентифіковано після виходу: {account.is_authenticated()}")
 
     print("\n--- Журнал аудиту ---")
     account["audit_log"].show_all()
@@ -40,4 +63,5 @@ if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "demo":
         run_demo()
     else:
+        # Виправлена команда запуску для lab2
         print("Для демонстрації ООП запустіть: python -m labs.lab2.main demo")

@@ -12,7 +12,7 @@ REQUIRED_HEADERS = {
     "Strict-Transport-Security",
     "Content-Security-Policy",
     "X-Frame-Options",
-    "X-Content-Type-Options"
+    "X-Content-Type-Options",
 }
 
 
@@ -20,21 +20,20 @@ def setup_logging(log_level: str):
     numeric_level = getattr(logging, log_level.upper(), logging.INFO)
     if not isinstance(numeric_level, int):
         raise TypeError(f"Invalid log level: {log_level}")
-    logging.basicConfig(
-        level=numeric_level,
-        format='[%(levelname)s] %(message)s'
-    )
+    logging.basicConfig(level=numeric_level, format="[%(levelname)s] %(message)s")
 
 
 def check_software_leaks(headers: dict, url: str):
     # Регулярний вираз для пошуку витоку версій (наприклад, Apache/2.4.41)
-    version_pattern = re.compile(r'[a-zA-Z]+\/[\d\.]+')
+    version_pattern = re.compile(r"[a-zA-Z]+\/[\d\.]+")
     leaks = []
 
     for target_header in ["Server", "X-Powered-By"]:
         if target_header in headers and version_pattern.search(headers[target_header]):
             leaks.append(target_header)
-            logger.warning(f"[LEAK] {url} leaks info in '{target_header}': {headers[target_header]}")
+            logger.warning(
+                f"[LEAK] {url} leaks info in '{target_header}': {headers[target_header]}"
+            )
     return leaks
 
 
@@ -87,12 +86,14 @@ def audit_headers(input_file: Path, output_file: Path, strict: bool):
 
         missing_str = ", ".join(missing_headers) if missing_headers else "None"
 
-        results.append({
-            "Target Resource": url,
-            "Security Score": f"{score}/100",
-            "Status": status,
-            "Missing Security Headers": missing_str
-        })
+        results.append(
+            {
+                "Target Resource": url,
+                "Security Score": f"{score}/100",
+                "Status": status,
+                "Missing Security Headers": missing_str,
+            }
+        )
 
         # Згідно з вимогами, завжди логуємо відсутні заголовки
         if missing_headers:
@@ -104,8 +105,15 @@ def audit_headers(input_file: Path, output_file: Path, strict: bool):
     # Збереження результатів аудиту у CSV-файл
     try:
         with open(output_file, "w", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=["Target Resource", "Security Score", "Status",
-                                                   "Missing Security Headers"])
+            writer = csv.DictWriter(
+                f,
+                fieldnames=[
+                    "Target Resource",
+                    "Security Score",
+                    "Status",
+                    "Missing Security Headers",
+                ],
+            )
             writer.writeheader()
             writer.writerows(results)
         logger.info(f"Header audit report generated at {output_file}")
@@ -116,10 +124,22 @@ def audit_headers(input_file: Path, output_file: Path, strict: bool):
 def main():
     # Додано парсер аргументів командного рядка (argparse)
     parser = argparse.ArgumentParser(description="HTTP Headers Security Auditor")
-    parser.add_argument("--headers-file", type=Path, required=True, help="Path to JSON file with HTTP headers")
-    parser.add_argument("--output-csv", type=Path, required=True, help="Path to output CSV report")
+    parser.add_argument(
+        "--headers-file",
+        type=Path,
+        required=True,
+        help="Path to JSON file with HTTP headers",
+    )
+    parser.add_argument(
+        "--output-csv", type=Path, required=True, help="Path to output CSV report"
+    )
     parser.add_argument("--strict", action="store_true", help="Apply strict scoring")
-    parser.add_argument("--log-level", type=str, default="INFO", help="Logging level (INFO, WARNING, ERROR)")
+    parser.add_argument(
+        "--log-level",
+        type=str,
+        default="INFO",
+        help="Logging level (INFO, WARNING, ERROR)",
+    )
 
     args = parser.parse_args()
 
@@ -130,4 +150,4 @@ def main():
 if __name__ == "__main__":
     main()
 
-#python -m labs.lab2.task2 --headers-file labs/lab2/data/headers.json --output-csv labs/lab2/data/headers_audit.csv --strict
+# python -m labs.lab2.task2 --headers-file labs/lab2/data/headers.json --output-csv labs/lab2/data/headers_audit.csv --strict

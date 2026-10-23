@@ -33,7 +33,9 @@ def generate_hash(password: str, salt: str = "00000") -> str:
     if not password or not salt:
         raise ValueError("Пароль або сіль не можуть бути порожніми.")
     if len(password) < MIN_PASSWORD_LENGTH:
-        raise ValidationError(f"Пароль надто короткий (мінімум {MIN_PASSWORD_LENGTH} символів).")
+        raise ValidationError(
+            f"Пароль надто короткий (мінімум {MIN_PASSWORD_LENGTH} символів)."
+        )
 
     combined = password + salt
     # sha224 для Варіанту 9
@@ -91,7 +93,9 @@ def log_event(func):
                 "event": "login",
                 "user": username,
                 "result": result,
-                "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
+                "timestamp": datetime.now(timezone.utc).strftime(
+                    "%Y-%m-%d %H:%M:%S UTC"
+                ),
                 "args": args,
                 "kwargs": kwargs,
             }
@@ -129,7 +133,10 @@ def login(username: str, password: str) -> bool:
         return False  # Пароль не проходить базову валідацію, тому авторизація неможлива
 
     for user_record in db:
-        if user_record["username"] == username and user_record["password_hash"] == input_hash:
+        if (
+            user_record["username"] == username
+            and user_record["password_hash"] == input_hash
+        ):
             return True
     return False
 
@@ -140,7 +147,7 @@ def main() -> None:
         ("user1", "ValidPassForVar9"),
         ("guest", "Short123"),  # Викличе ValidationError (менше 13 символів)
         ("developer", "AnotherLongPassword"),
-        ("", "ffff")
+        ("", "ffff"),
     )
 
     print("--- Реєстрація користувачів ---")
@@ -154,7 +161,9 @@ def main() -> None:
     print("\n--- Спроби авторизації ---")
     try:
         print(f"Login admin: {login('admin', 'SuperSecurePass123')}")  # success
-        print(f"Login user1 (wrong pass): {login('user1', 'WrongPassword123')}")  # failure
+        print(
+            f"Login user1 (wrong pass): {login('user1', 'WrongPassword123')}"
+        )  # failure
         print(f"Login unknown: {login('hacker', 'TryToHack12345')}")  # failure
     except ValueError as e:
         print(f"Помилка вводу: {e}")

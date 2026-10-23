@@ -19,7 +19,7 @@ PASSWORDS = [
     "Threat@Intel",
     "usual",
     "qpwoeiru",
-    "qqq"
+    "qqq",
 ]
 
 CRITERIA = {
@@ -34,7 +34,9 @@ FORBIDDEN_PASSWORDS = {"plain", "member", "regular", "ordinary", "usual", "user"
 
 def analyze_passwords() -> None:
     """Аналізує список паролів, генерує дублікати та виводить результати."""
-    print(f"--- Аналіз паролів | {STUDENT_NAME}, {GROUP_NAME}, Варіант {VARIANT_NUMBER} ---\n")
+    print(
+        f"--- Аналіз паролів | {STUDENT_NAME}, {GROUP_NAME}, Варіант {VARIANT_NUMBER} ---\n"
+    )
 
     # Робимо копію, щоб не мутувати оригінальну глобальну змінну
     current_passwords = PASSWORDS.copy()

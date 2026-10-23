@@ -1,10 +1,14 @@
-import os
-import re
 import hashlib
 import hmac
-from datetime import datetime, timezone, timedelta
+import os
+import re
 from dataclasses import dataclass
-from typing import List, Set, Optional, Any
+from datetime import datetime, timedelta, timezone
+from typing import Any
+
+# Іменована константа для кількості ітерацій хешування
+HASH_ITERATIONS = 100000
+
 
 class User:
     def __init__(self, username: str, email: str, role: str = "user"):
@@ -13,8 +17,8 @@ class User:
         self.email = email
         self.role = role
         self.active = True
-        self.__password_hash: Optional[bytes] = None
-        self.__password_salt: Optional[bytes] = None
+        self.__password_hash: bytes | None = None
+        self.__password_salt: bytes | None = None
 
     @property
     def email(self) -> str:
@@ -30,15 +34,17 @@ class User:
 
     def set_password(self, password: str):
         self.__password_salt = os.urandom(16)
+        # Використання константи для ітерацій
         self.__password_hash = hashlib.pbkdf2_hmac(
-            "sha256", password.encode(), self.__password_salt, 100000
+            "sha256", password.encode(), self.__password_salt, HASH_ITERATIONS
         )
 
     def check_password(self, password: str) -> bool:
         if not self.__password_hash or not self.__password_salt:
             return False
+        # Використання константи для ітерацій
         test_hash = hashlib.pbkdf2_hmac(
-            "sha256", password.encode(), self.__password_salt, 100000
+            "sha256", password.encode(), self.__password_salt, HASH_ITERATIONS
         )
         return hmac.compare_digest(self.__password_hash, test_hash)
 
@@ -48,8 +54,9 @@ class User:
     def __str__(self):
         return f"User({self.username}, {self.email}, Role: {self.role}, Active: {self.active})"
 
+
 class Admin(User):
-    def __init__(self, username: str, email: str, permissions: Optional[Set[str]] = None):
+    def __init__(self, username: str, email: str, permissions: set[str] | None = None):
         super().__init__(username, email, role="admin")
         self.permissions = permissions if permissions is not None else set()
 
@@ -65,6 +72,7 @@ class Admin(User):
     def __str__(self):
         return super().__str__() + f" Permissions: {list(self.permissions)}"
 
+
 class Session:
     def __init__(self, ip: str):
         self.ip = ip
@@ -77,7 +85,10 @@ class Session:
     def is_active(self, timeout_sec: int) -> bool:
         if timeout_sec <= 0:
             return False
-        return (datetime.now(timezone.utc) - self.last_activity) <= timedelta(seconds=timeout_sec)
+        return (datetime.now(timezone.utc) - self.last_activity) <= timedelta(
+            seconds=timeout_sec
+        )
+
 
 @dataclass
 class LogEntry:
@@ -85,31 +96,43 @@ class LogEntry:
     username: str
     action: str
 
+
 class AuditLog:
     def __init__(self):
-        self.logs: List[LogEntry] = []
+        self.logs: list[LogEntry] = []
 
     def add_log(self, username: str, action: str):
         self.logs.append(LogEntry(datetime.now(timezone.utc), username, action))
 
     def show_all(self):
+        tz_utc_3 = timezone(timedelta(hours=3))
         for log in self.logs:
-            print(f"[{log.timestamp.strftime('%Y-%m-%d %H:%M:%S UTC')}] {log.username}: {log.action}")
+            local_time = log.timestamp.astimezone(tz_utc_3)
+            print(
+                f"[{local_time.strftime('%Y-%m-%d %H:%M:%S UTC')}] {log.username}: {log.action}"
+            )
+
 
 class UserAccount:
     SESSION_TIMEOUT_SEC = 900
 
-    def __init__(self, user: User, audit_log: Optional[AuditLog] = None):
+    def __init__(self, user: User, audit_log: AuditLog | None = None):
         self.user = user
-        self.session: Optional[Session] = None
+        self.session: Session | None = None
         self.audit_log = audit_log if audit_log else AuditLog()
 
-    def login(self, password: str, ip: str) -> bool:
+    # Сигнатура методу приймає username, password, ip
+    def login(self, username: str, password: str, ip: str) -> bool:
+        if self.user.username != username:
+            self.audit_log.add_log(username, "login_failure (wrong user)")
+            return False
         if not self.user.active:
-            self.audit_log.add_log(self.user.username, "login_failure (inactive)")
+            self.audit_log.add_log(self.user.username, "login_failure")
             return False
         if self.user.check_password(password):
             self.session = Session(ip)
+            # Явний виклик touch() після успіху
+            self.session.touch()
             self.audit_log.add_log(self.user.username, "login_success")
             return True
         self.audit_log.add_log(self.user.username, "login_failure")
