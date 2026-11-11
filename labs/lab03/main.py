@@ -1,4 +1,4 @@
-"""Головний модуль FastAPI-застосунку для Лабораторної роботи №3 (Варіант 9)."""
+"""Головний модуль FastAPI-застосунку"""
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
